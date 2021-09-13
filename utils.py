@@ -1,7 +1,6 @@
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-
 def tokenize_and_track(tokens, labels, tokenizer, label_map):
     """[summary]
 
