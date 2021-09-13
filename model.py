@@ -1,33 +1,16 @@
-import pytorch_lightning as pl
 import pickle
 from typing import List
 
+import pytorch_lightning as pl
 import torch
 from allennlp.modules.conditional_random_field import (ConditionalRandomField,
                                                        allowed_transitions)
+from seqeval.metrics.sequence_labeling import f1_score, get_entities
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer, AutoModel
-
 from tqdm import tqdm
-
-from seqeval.metrics.sequence_labeling import f1_score, get_entities
-# from utils import collate_fn, tokenize_and_track
-
-with open('data/tdm.pkl', 'rb') as f:
-    data = pickle.load(f)
-
-label_map = data['tag_to_id']
-
-train_data = data['train']
-
-tokenizer = AutoTokenizer.from_pretrained("allenai/scibert_scivocab_uncased")
-
-
-batch_list = [i.values() for i in train_data[:10]]
-
-# x = collate_fn(batch_list, tokenizer, label_map)
+from transformers import AutoModel, AutoTokenizer
 
 
 def select_first_subword(hidden_state, first_subtoken_mask, seq_length, padding_value=-1):
@@ -226,7 +209,7 @@ class BertCRF(nn.Module):
             sub_tokens = self.tokenizer.tokenize(token)
 
             if len(sub_tokens) < 1:
-                sub_tokens = [tokenizer.unk_token]
+                sub_tokens = [self.tokenizer.unk_token]
 
             sub_tokens = self.tokenizer.convert_tokens_to_ids(sub_tokens)
 
@@ -351,8 +334,11 @@ class LightningWrapper(pl.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(), lr=1e-5)
         return optimizer
 
+with open('data/tdm.pkl', 'rb') as f:
+    label_map = pickle.load(f)['tag_to_id']
+
 lightning_model = LightningWrapper(label_map)
 
-trainer = pl.Trainer(gpus=1, precision=32, max_epochs=1)
+trainer = pl.Trainer(gpus=1, precision=32, max_epochs=10)
 
 trainer.fit(lightning_model)
